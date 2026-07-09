@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Déploiement microservices — Docker & Kubernetes</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#2563eb;--blue-l:#3b82f6;--blue-xl:#60a5fa;--blue-2xl:#93c5fd;
+  --slate-900:#0f172a;--slate-800:#1e293b;--slate-700:#334155;
+  --slate-600:#475569;--slate-400:#94a3b8;--slate-200:#e2e8f0;
+  --amber:#f59e0b;--amber-l:#fcd34d;
+  --green:#10b981;--green-l:#6ee7b7;
+  --red:#ef4444;--red-l:#fca5a5;
+  --teal:#14b8a6;--teal-l:#5eead4;
+  --purple-l:#c4b5fd;--white:#ffffff;
+}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--slate-900);color:var(--white);overflow:hidden;user-select:none}
+
+/* DECK */
+.deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.slide{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;
+  padding:48px 72px 80px;
+  opacity:0;transform:translateX(60px);
+  transition:opacity .4s ease,transform .4s ease;pointer-events:none;
+}
+.slide.active{opacity:1;transform:none;pointer-events:all}
+.slide.prev{opacity:0;transform:translateX(-60px)}
+
+/* NAV */
+.nav{
+  position:fixed;bottom:52px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:14px;
+  background:rgba(15,23,42,.85);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:8px 18px;z-index:200;
+}
+.nav button{background:none;border:none;color:var(--white);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;transition:background .2s}
+.nav button:hover:not(:disabled){background:rgba(255,255,255,.12)}
+.nav button:disabled{opacity:.25;cursor:default}
+.ctr{font-size:12px;color:var(--slate-400);min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--slate-600);cursor:pointer;transition:all .25s}
+.dot.active{background:var(--blue-l);transform:scale(1.5)}
+.progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--teal));transition:width .4s ease;z-index:300}
+.chapter{position:fixed;top:20px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--slate-400);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:4px 12px;z-index:100}
+
+/* BACKGROUNDS */
+.bg-dark{background:var(--slate-900)}
+.bg-blue{background:linear-gradient(135deg,#1e40af,#2563eb,#3b82f6)}
+.bg-j1{background:radial-gradient(ellipse at 20% 50%,#0d1f3c,#0a1220)}
+.bg-j2{background:radial-gradient(ellipse at 70% 30%,#0c2340,#08111e)}
+.bg-j3{background:radial-gradient(ellipse at 30% 70%,#1a0808,#0f0505)}
+.bg-j4{background:radial-gradient(ellipse at 60% 60%,#042222,#030d0d)}
+.bg-end{background:linear-gradient(135deg,#1e40af,#2563eb,#0ea5e9)}
+
+/* TYPO */
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 12px;border-radius:999px;margin-bottom:16px}
+.tag-blue{background:rgba(37,99,235,.2);color:var(--blue-2xl);border:1px solid rgba(59,130,246,.3)}
+.tag-amber{background:rgba(245,158,11,.15);color:var(--amber-l);border:1px solid rgba(245,158,11,.3)}
+.tag-green{background:rgba(16,185,129,.15);color:var(--green-l);border:1px solid rgba(16,185,129,.3)}
+.tag-red{background:rgba(239,68,68,.15);color:var(--red-l);border:1px solid rgba(239,68,68,.3)}
+.tag-teal{background:rgba(20,184,166,.15);color:var(--teal-l);border:1px solid rgba(20,184,166,.3)}
+.tag-purple{background:rgba(139,92,246,.15);color:var(--purple-l);border:1px solid rgba(139,92,246,.3)}
+
+h1{font-size:clamp(34px,5vw,68px);font-weight:800;line-height:1.1;letter-spacing:-.03em}
+h2{font-size:clamp(24px,3.2vw,46px);font-weight:700;line-height:1.15;letter-spacing:-.025em}
+h3{font-size:clamp(14px,1.6vw,20px);font-weight:600;line-height:1.3}
+.sub{font-size:clamp(13px,1.3vw,17px);color:var(--slate-400);line-height:1.65;margin-top:10px}
+.hl{color:var(--blue-xl)} .ha{color:var(--amber-l)} .hg{color:var(--green-l)} .hr{color:var(--red-l)} .ht{color:var(--teal-l)}
+
+/* LAYOUT */
+.w100{width:100%}
+.narrow{max-width:680px;width:100%;text-align:center}
+.mid{max-width:860px;width:100%}
+.wide{max-width:1080px;width:100%}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;width:100%}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;width:100%}
+.col{display:flex;flex-direction:column}
+.row{display:flex;align-items:center}
+.gap-s{gap:8px}.gap-m{gap:14px}.gap-l{gap:22px}
+.mt-s{margin-top:10px}.mt-m{margin-top:20px}.mt-l{margin-top:28px}
+.center{text-align:center;align-items:center}
+
+/* CARDS */
+.card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:18px 20px}
+.card-blue{background:rgba(37,99,235,.1);border-color:rgba(59,130,246,.25)}
+.card-amber{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25)}
+.card-green{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25)}
+.card-red{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25)}
+.card-teal{background:rgba(20,184,166,.08);border-color:rgba(20,184,166,.25)}
+.card-purple{background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.25)}
+.card p{font-size:13px;color:var(--slate-400);line-height:1.65}
+.card ul{font-size:12px;color:var(--slate-400);padding-left:14px;line-height:1.9}
+
+/* KPI */
+.kpi{text-align:center;padding:18px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px}
+.kpi-v{font-size:clamp(24px,3vw,40px);font-weight:800;letter-spacing:-.03em;line-height:1}
+.kpi-l{font-size:10px;color:var(--slate-400);margin-top:5px;text-transform:uppercase;letter-spacing:.08em;font-weight:500}
+
+/* FEATURE ITEM */
+.fi{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 14px}
+.fi-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fi-name{font-size:13px;font-weight:600}
+.fi-desc{font-size:11px;color:var(--slate-400)}
+
+/* CODE */
+.code{font-family:'SF Mono','Fira Code',monospace;font-size:11px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px 16px;color:#a5f3fc;line-height:1.75;width:100%}
+.code .kw{color:#c084fc}.code .str{color:#86efac}.code .cmt{color:#475569}
+
+/* REF */
+.ref{font-family:monospace;font-size:.8em;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);padding:2px 7px;border-radius:4px;color:var(--slate-400)}
+
+/* PILLS */
+.pill{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:500;color:var(--slate-200)}
+.pill.me{background:rgba(37,99,235,.2);border-color:rgba(59,130,246,.4);color:var(--blue-2xl)}
+.team{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:16px}
+
+/* ICONS */
+svg.lucide{display:inline-block;vertical-align:middle;flex-shrink:0}
+.ico-s svg.lucide{width:14px;height:14px}
+.ico-m svg.lucide{width:20px;height:20px}
+.ico-l svg.lucide{width:26px;height:26px}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--slate-400);border-bottom:1px solid rgba(255,255,255,.1)}
+td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05);color:var(--slate-200)}
+tr.pick{background:rgba(37,99,235,.15)}
+tr.pick td{color:var(--blue-2xl)}
+.ok{color:var(--green-l)}.no{color:var(--red-l)}
+
+/* KEY MESSAGE BAND */
+.keymsg{
+  display:flex;align-items:flex-start;gap:10px;
+  background:rgba(37,99,235,.08);border:1px solid rgba(59,130,246,.25);
+  border-radius:10px;padding:12px 16px;margin-top:auto;width:100%;
+}
+.keymsg p{font-size:12.5px;color:var(--slate-200);line-height:1.55;font-style:italic}
+.keymsg .ico-m{color:var(--blue-xl);flex-shrink:0;margin-top:1px}
+
+/* SCHEMA FLOW */
+.flow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;width:100%}
+.flow-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 18px;text-align:center;min-width:120px}
+.flow-box .fb-title{font-size:12px;font-weight:700;color:var(--white)}
+.flow-box .fb-sub{font-size:10px;color:var(--slate-400);margin-top:2px}
+.flow-arrow{color:var(--slate-400);font-size:18px}
+.flow-arrow.down{transform:rotate(90deg)}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="chapter" id="chapter">Introduction</div>
+<div class="deck" id="deck">
+
+
+<!-- ══ 1 — TITRE ══ -->
+<div class="slide bg-blue" data-ch="Introduction">
+  <div class="narrow col center gap-l">
+    <div class="tag tag-amber ico-s"><i data-lucide="server-cog"></i> TP Final — Docker & Kubernetes</div>
+    <h1>Déploiement d'une application microservices</h1>
+    <p class="sub" style="max-width:540px">Conteneurisation avec Docker, orchestration avec Kubernetes, exposition via Ingress NGINX.</p>
+    <div class="g2 w100" style="max-width:520px;margin-top:6px">
+      <div class="fi"><div class="fi-ico ico-m" style="background:rgba(255,255,255,.15)"><i data-lucide="box"></i></div><div><div class="fi-name">Conteneurisation</div><div class="fi-desc">Docker par service</div></div></div>
+      <div class="fi"><div class="fi-ico ico-m" style="background:rgba(255,255,255,.15)"><i data-lucide="ship"></i></div><div><div class="fi-name">Orchestration</div><div class="fi-desc">Kubernetes</div></div></div>
+      <div class="fi"><div class="fi-ico ico-m" style="background:rgba(255,255,255,.15)"><i data-lucide="network"></i></div><div><div class="fi-name">Exposition</div><div class="fi-desc">Ingress NGINX</div></div></div>
+      <div class="fi"><div class="fi-ico ico-m" style="background:rgba(255,255,255,.15)"><i data-lucide="layers"></i></div><div><div class="fi-name">Architecture</div><div class="fi-desc">Application microservices</div></div></div>
+    </div>
+    <div class="keymsg" style="max-width:560px;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)">
+      <span class="ico-m"><i data-lucide="quote"></i></span>
+      <p style="color:rgba(255,255,255,.85)">L'objectif est de passer d'un projet microservices local à une application conteneurisée, orchestrée par Kubernetes et accessible via un point d'entrée HTTP unique.</p>
+    </div>
+  </div></div>
+
+
+<!-- ══ 2 — CONTEXTE : APPLICATION MICROSERVICES ══ -->
+<div class="slide bg-dark" data-ch="Contexte">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-blue">Contexte</div>
+      <h2>Une application <span class="hl">découpée en microservices</span></h2>
+      <p class="sub">Chaque service a une responsabilité précise et communique avec les autres via un bus d'événements.</p>
+    </div>
+    <table>
+      <thead><tr><th>Service</th><th>Rôle</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ref">client</span></td><td>Interface React visible par l'utilisateur</td></tr>
+        <tr><td><span class="ref">posts</span></td><td>Création et gestion des sujets</td></tr>
+        <tr><td><span class="ref">comments</span></td><td>Création et gestion des commentaires</td></tr>
+        <tr><td><span class="ref">query</span></td><td>Agrégation des posts et commentaires</td></tr>
+        <tr><td><span class="ref">moderation</span></td><td>Validation ou rejet des commentaires</td></tr>
+        <tr><td><span class="ref">event-bus</span></td><td>Transmission des événements entre services</td></tr>
+      </tbody>
+    </table>
+    <div class="keymsg">
+      <span class="ico-m"><i data-lucide="quote"></i></span>
+      <p>Le projet n'est pas monolithique : chaque service a une responsabilité précise et communique avec les autres via un bus d'événements.</p>
+    </div>
+  </div></div>
+
+
+<!-- ══ 3 — POURQUOI KUBERNETES ══ -->
+<div class="slide bg-j1" data-ch="Motivation">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-blue">Motivation</div>
+      <h2>Pourquoi passer de <span class="hl">Docker à Kubernetes</span> ?</h2>
+      <p class="sub">Docker crée les images ; Kubernetes les déploie, les supervise et assure leur disponibilité.</p>
+    </div>
+    <table>
+      <thead><tr><th>Docker</th><th>Kubernetes</th></tr></thead>
+      <tbody>
+        <tr><td>Lance un conteneur</td><td class="ok">Orchestre plusieurs conteneurs</td></tr>
+        <tr><td>Pas d'auto-réparation</td><td class="ok">Recrée automatiquement les Pods</td></tr>
+        <tr><td>Pas de découverte de services</td><td class="ok">Services Kubernetes avec DNS interne</td></tr>
+        <tr><td>Pas de routage HTTP natif</td><td class="ok">Ingress</td></tr>
+        <tr><td>Gestion manuelle</td><td class="ok">Orchestration automatique</td></tr>
+      </tbody>
+    </table>
+    <div class="keymsg">
+      <span class="ico-m"><i data-lucide="quote"></i></span>
+      <p>Docker permet de créer les images des conteneurs, tandis que Kubernetes permet de les déployer, de les superviser, de les faire communiquer et d'assurer leur disponibilité.</p>
+    </div>
+  </div></div>
+
+
+<!-- ══ 4 — ARCHITECTURE GLOBALE ══ -->
+<div class="slide bg-j1" data-ch="Architecture">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-blue">Architecture</div>
+      <h2>Architecture <span class="hl">générale</span> de l'application</h2>
+      <p class="sub">L'utilisateur passe par l'Ingress, les microservices communiquent entre eux à l'intérieur du cluster.</p>
+    </div>
+    <div class="flow">
+      <div class="flow-box"><div class="fb-title">Navigateur</div></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box"><div class="fb-title">Ingress NGINX</div></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box"><div class="fb-title">Services K8s</div></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box"><div class="fb-title">Pods / Microservices</div></div>
+    </div>
+    <div class="g2">
+      <div class="card card-blue">
+        <h3 style="font-size:13px;color:var(--blue-2xl);margin-bottom:8px">Routes principales</h3>
+        <table>
+          <thead><tr><th>Route</th><th>Service cible</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ref">/</span></td><td>client-srv</td></tr>
+            <tr><td><span class="ref">/posts</span></td><td>query-srv</td></tr>
+            <tr><td><span class="ref">/posts/create</span></td><td>posts-clusterip-srv</td></tr>
+            <tr><td><span class="ref">/posts/:id/comments</span></td><td>comments-srv</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card card-teal">
+        <h3 style="font-size:13px;color:var(--teal-l);margin-bottom:8px">Communication interne</h3>
+        <div class="code" style="font-size:11px">
+          posts → event-bus → query<br>
+          comments → event-bus → moderation<br>
+          moderation → event-bus → comments/query
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+
+<!-- ══ 5 — ORGANISATION DU PROJET ══ -->
+<div class="slide bg-j2" data-ch="Organisation">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-green">Organisation</div>
+      <h2>Organisation du <span class="hg">code et de l'infrastructure</span></h2>
+      <p class="sub">Le code applicatif et l'infrastructure Kubernetes sont séparés pour garder une organisation propre et professionnelle.</p>
+    </div>
+    <div class="g2">
+      <div class="code" style="font-size:12px">
+        Kubernetes/<br>
+        ├── client/<br>
+        ├── posts/<br>
+        ├── comments/<br>
+        ├── query/<br>
+        ├── moderation/<br>
+        ├── event-bus/<br>
+        └── infra/<br>
+        &nbsp;&nbsp;&nbsp;├── deployments/<br>
+        &nbsp;&nbsp;&nbsp;├── services/<br>
+        &nbsp;&nbsp;&nbsp;└── ingress/
+      </div>
+      <div class="col gap-m">
+        <div class="card card-green">
+          <ul>
+            <li>Les dossiers applicatifs contiennent le code source et les Dockerfile.</li>
+            <li>Le dossier <span class="ref">infra/</span> centralise les fichiers Kubernetes.</li>
+            <li>Cette séparation rend le projet plus lisible et plus maintenable.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="keymsg">
+      <span class="ico-m"><i data-lucide="quote"></i></span>
+      <p>Le code applicatif et l'infrastructure Kubernetes sont séparés pour garder une organisation propre et professionnelle.</p>
+    </div>
+  </div></div>
+
+
+<!-- ══ 6 — CONTENEURISATION DOCKER ══ -->
+<div class="slide bg-j2" data-ch="Docker">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-green">Conteneurisation</div>
+      <h2><span class="hg">Une image Docker</span> par microservice</h2>
+      <p class="sub">Chaque microservice est isolé dans sa propre image Docker avec ses dépendances, son port et sa commande de démarrage.</p>
+    </div>
+    <div class="g2">
+      <div class="code">
+        <span class="cmt"># Dockerfile simplifié</span><br>
+        <span class="kw">FROM</span> node:20-alpine<br>
+        <span class="kw">WORKDIR</span> /app<br>
+        <span class="kw">COPY</span> package*.json ./<br>
+        <span class="kw">RUN</span> npm install<br>
+        <span class="kw">COPY</span> . .<br>
+        <span class="kw">EXPOSE</span> 4000<br>
+        <span class="kw">CMD</span> [<span class="str">"npm"</span>, <span class="str">"start"</span>]
+      </div>
+      <table>
+        <thead><tr><th>Service</th><th style="text-align:right">Port</th></tr></thead>
+        <tbody>
+          <tr><td>client</td><td style="text-align:right">3000</td></tr>
+          <tr><td>posts</td><td style="text-align:right">4000</td></tr>
+          <tr><td>comments</td><td style="text-align:right">4001</td></tr>
+          <tr><td>query</td><td style="text-align:right">4002</td></tr>
+          <tr><td>moderation</td><td style="text-align:right">4003</td></tr>
+          <tr><td>event-bus</td><td style="text-align:right">4005</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div></div>
+
+
+<!-- ══ 7 — CONSTRUCTION DES IMAGES ══ -->
+<div class="slide bg-j2" data-ch="Docker · Build">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-green">Construction des images</div>
+      <h2>Build & <span class="hg">vérification</span> des images</h2>
+      <p class="sub">Docker prépare les images ; Kubernetes les exécute ensuite sous forme de Pods.</p>
+    </div>
+    <div class="g2">
+      <div class="col gap-m">
+        <div class="code" style="font-size:11px">
+          docker build -t posts ./posts<br>
+          docker build -t comments ./comments<br>
+          docker build -t query ./query<br>
+          docker build -t moderation ./moderation<br>
+          docker build -t event-bus ./event-bus<br>
+          docker build -t client:v2 ./client<br><br>
+          <span class="cmt"># Vérification</span><br>
+          docker images
+        </div>
+        <div class="card card-amber">
+          <p><strong style="color:var(--white)">imagePullPolicy: IfNotPresent</strong> — Kubernetes utilise les images locales lorsqu'elles sont disponibles, tout en permettant leur téléchargement si nécessaire.</p>
+        </div>
+      </div>
+      <div class="col gap-m">
+        <div class="card card-green">
+          <ul>
+            <li>Une image a été construite pour chaque microservice.</li>
+            <li>L'image réellement utilisée pour le client est <span class="ref">client:v2</span>.</li>
+            <li>Ces images sont référencées ensuite dans les Deployments Kubernetes.</li>
+          </ul>
+        </div>
+        <div class="keymsg">
+          <span class="ico-m"><i data-lucide="quote"></i></span>
+          <p>Docker prépare les images ; Kubernetes les exécute ensuite sous forme de Pods.</p>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+
+<!-- ══ 8 — DEPLOYMENTS ET SERVICES ══ -->
+<div class="slide bg-j3" data-ch="Kubernetes · Déploiement">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-red">Déploiement Kubernetes</div>
+      <h2>Deployments & <span class="hr">Services</span></h2>
+      <p class="sub">Les Deployments gèrent les Pods, les Services permettent aux microservices de se joindre via le DNS interne.</p>
+    </div>
+    <div class="g2">
+      <div class="card card-red">
+        <h3 style="font-size:13px;color:var(--red-l);margin-bottom:6px">Rôle des Deployments</h3>
+        <ul>
+          <li>créer les Pods ;</li>
+          <li>maintenir les services en fonctionnement ;</li>
+          <li>redémarrer les Pods si nécessaire ;</li>
+          <li>gérer les mises à jour.</li>
+        </ul>
+      </div>
+      <div class="card card-red">
+        <h3 style="font-size:13px;color:var(--red-l);margin-bottom:6px">Rôle des Services</h3>
+        <ul>
+          <li>donner une adresse stable aux Pods ;</li>
+          <li>permettre la communication interne ;</li>
+          <li>éviter de dépendre de l'IP dynamique des Pods.</li>
+        </ul>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Service Kubernetes</th><th style="text-align:right">Port</th><th>Cible</th></tr></thead>
+      <tbody>
+        <tr><td>client-srv</td><td style="text-align:right">3000</td><td>client</td></tr>
+        <tr><td>posts-clusterip-srv</td><td style="text-align:right">4000</td><td>posts</td></tr>
+        <tr><td>comments-srv</td><td style="text-align:right">4001</td><td>comments</td></tr>
+        <tr><td>query-srv</td><td style="text-align:right">4002</td><td>query</td></tr>
+        <tr><td>moderation-srv</td><td style="text-align:right">4003</td><td>moderation</td></tr>
+        <tr><td>event-bus-srv</td><td style="text-align:right">4005</td><td>event-bus</td></tr>
+      </tbody>
+    </table>
+  </div></div>
+
+
+<!-- ══ 9 — INGRESS NGINX ══ -->
+<div class="slide bg-j3" data-ch="Kubernetes · Ingress">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-red">Exposition</div>
+      <h2>Ingress NGINX & <span class="hr">accès à l'application</span></h2>
+      <p class="sub">L'Ingress est le point d'entrée HTTP unique de l'application et redirige les requêtes selon l'URL.</p>
+    </div>
+    <div class="g2">
+      <div class="col gap-m">
+        <div class="code" style="font-size:11px">
+          <span class="cmt"># Accès local via port-forward</span><br>
+          kubectl port-forward -n ingress-nginx \<br>
+          &nbsp;service/ingress-nginx-controller 8080:80<br><br>
+          <span class="cmt"># Application accessible sur</span><br>
+          http://localhost:8080
+        </div>
+        <div class="card card-red">
+          <p>Aucune modification du fichier <span class="ref">hosts</span> n'est nécessaire. Association de l'Ingress au contrôleur via : <span class="ref">ingressClassName: nginx</span></p>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Route</th><th>Service cible</th></tr></thead>
+        <tbody>
+          <tr><td><span class="ref">/</span></td><td>client-srv</td></tr>
+          <tr><td><span class="ref">/posts</span></td><td>query-srv</td></tr>
+          <tr><td><span class="ref">/posts/create</span></td><td>posts-clusterip-srv</td></tr>
+          <tr><td><span class="ref">/posts/.*/comments</span></td><td>comments-srv</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="keymsg">
+      <span class="ico-m"><i data-lucide="quote"></i></span>
+      <p>L'Ingress est le point d'entrée HTTP unique de l'application et redirige les requêtes vers les bons services selon l'URL.</p>
+    </div>
+  </div></div>
+
+
+<!-- ══ 10 — TESTS, PROBLÈMES, RÉSULTAT FINAL ══ -->
+<div class="slide bg-end" data-ch="Conclusion">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-amber">Validation & Conclusion</div>
+      <h2>Résultat final du <span class="ha">déploiement</span></h2>
+      <p class="sub">Application microservices conteneurisée, orchestrée par Kubernetes, accessible via Ingress NGINX.</p>
+    </div>
+    <div class="g2">
+      <div class="col gap-m">
+        <div class="code" style="font-size:11px">
+          kubectl get deployments<br>
+          kubectl get pods<br>
+          kubectl get svc<br>
+          kubectl get ingress<br><br>
+          <span class="cmt"># Test de haute disponibilité</span><br>
+          kubectl delete pod -l app=posts<br>
+          kubectl get pods
+        </div>
+        <div class="card card-green">
+          <p><strong style="color:var(--white)">Résultat attendu :</strong> Kubernetes recrée automatiquement le Pod supprimé afin de maintenir le nombre de réplicas défini.</p>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:13px;color:var(--amber-l);margin-bottom:8px">Problèmes rencontrés</h3>
+        <table>
+          <tbody>
+            <tr><td style="font-size:11px">React ne démarrait pas</td><td style="font-size:11px">Ajout de <span class="ref">BROWSER=none</span></td></tr>
+            <tr><td style="font-size:11px">Ingress ne fonctionnait pas</td><td style="font-size:11px">Installation du contrôleur NGINX</td></tr>
+            <tr><td style="font-size:11px">Erreur résolution event-bus-srv</td><td style="font-size:11px">Redémarrage du Deployment query</td></tr>
+            <tr><td style="font-size:11px">Routage frontend/backend</td><td style="font-size:11px">Routes relatives côté React</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="g4 w100">
+      <div class="kpi" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.2)"><div class="kpi-v" style="color:white">1/1</div><div class="kpi-l" style="color:rgba(255,255,255,.6)">Deployments dispo.</div></div>
+      <div class="kpi" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.2)"><div class="kpi-v" style="color:white">Running</div><div class="kpi-l" style="color:rgba(255,255,255,.6)">Tous les Pods</div></div>
+      <div class="kpi" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.2)"><div class="kpi-v" style="color:white">6</div><div class="kpi-l" style="color:rgba(255,255,255,.6)">Services créés</div></div>
+      <div class="kpi" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.2)"><div class="kpi-v" style="color:white">8080</div><div class="kpi-l" style="color:rgba(255,255,255,.6)">localhost port</div></div>
+    </div>
+    <p style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;max-width:640px">Ce TP a permis de comprendre concrètement le rôle de Docker dans la création des images, et celui de Kubernetes dans l'orchestration, la communication interne, l'exposition des services et l'auto-réparation des Pods.</p>
+  </div></div>
+
+
+</div><!-- end deck -->
+
+<div class="nav" id="nav">
+  <button id="btnP" onclick="go(cur-1)">‹</button>
+  <div id="dots" style="display:flex;gap:5px;align-items:center"></div>
+  <span class="ctr" id="ctr">1 / 10</span>
+  <button id="btnN" onclick="go(cur+1)">›</button>
+</div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+const total=slides.length;
+let cur=0;
+const prog=document.getElementById('progress');
+const ctr=document.getElementById('ctr');
+const chap=document.getElementById('chapter');
+const dotsEl=document.getElementById('dots');
+const btnP=document.getElementById('btnP');
+const btnN=document.getElementById('btnN');
+
+slides.forEach((_,i)=>{
+  const d=document.createElement('div');
+  d.className='dot';d.onclick=()=>go(i);dotsEl.appendChild(d);
+});
+
+function go(n){
+  n=Math.max(0,Math.min(total-1,n));
+  if(n===cur)return;
+  slides[cur].classList.remove('active');
+  slides[cur].classList.add('prev');
+  setTimeout(()=>slides[cur].classList.remove('prev'),400);
+  cur=n;
+  slides[cur].classList.add('active');
+  prog.style.width=(cur/(total-1)*100)+'%';
+  ctr.textContent=(cur+1)+' / '+total;
+  chap.textContent=slides[cur].dataset.ch||'';
+  dotsEl.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===cur));
+  btnP.disabled=cur===0;btnN.disabled=cur===total-1;
+}
+
+document.addEventListener('keydown',e=>{
+  if(['ArrowRight',' '].includes(e.key)){e.preventDefault();go(cur+1);}
+  if(e.key==='ArrowLeft'){e.preventDefault();go(cur-1);}
+  if(e.key==='Home'){e.preventDefault();go(0);}
+  if(e.key==='End'){e.preventDefault();go(total-1);}
+});
+
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>50)go(dx<0?cur+1:cur-1);
+},{passive:true});
+
+prog.style.width='0%';
+dotsEl.querySelectorAll('.dot')[0].classList.add('active');
+btnP.disabled=true;
+chap.textContent=slides[0].dataset.ch||'';
+lucide.createIcons();
+</script>
+</body>
+</html>
