@@ -384,57 +384,200 @@ tr.pick td{color:var(--blue-2xl)}
   </div></div>
 
 
-<!-- ══ 8 — DEPLOYMENTS ET SERVICES ══ -->
-<div class="slide bg-j3" data-ch="Kubernetes · Déploiement">
+<!-- ══ 8 — DEPLOYMENTS ══ -->
+<div class="slide bg-j3" data-ch="Kubernetes · Deployments">
   <div class="wide col gap-l">
     <div class="col gap-s">
       <div class="tag tag-red">Déploiement Kubernetes</div>
-      <h2>Deployments & <span class="hr">Services</span></h2>
-      <p class="sub">Les Deployments gèrent les Pods, les Services permettent aux microservices de se joindre via le DNS interne.</p>
+      <h2>Les <span class="hr">Deployments</span></h2>
+      <p class="sub">Le Deployment indique à Kubernetes quel conteneur lancer, combien d'instances maintenir et comment identifier les Pods associés.</p>
     </div>
     <div class="g2">
       <div class="card card-red">
-        <h3 style="font-size:13px;color:var(--red-l);margin-bottom:6px">Rôle des Deployments</h3>
+        <h3 style="font-size:13px;color:var(--red-l);margin-bottom:6px">Rôle d'un Deployment</h3>
         <ul>
           <li>créer les Pods ;</li>
-          <li>maintenir les services en fonctionnement ;</li>
-          <li>redémarrer les Pods si nécessaire ;</li>
+          <li>maintenir les Pods en fonctionnement ;</li>
+          <li>redémarrer automatiquement un Pod en cas de panne ;</li>
           <li>gérer les mises à jour.</li>
         </ul>
       </div>
-      <div class="card card-red">
-        <h3 style="font-size:13px;color:var(--red-l);margin-bottom:6px">Rôle des Services</h3>
-        <ul>
-          <li>donner une adresse stable aux Pods ;</li>
-          <li>permettre la communication interne ;</li>
-          <li>éviter de dépendre de l'IP dynamique des Pods.</li>
-        </ul>
+      <div class="code" style="font-size:11px">
+        <span class="kw">apiVersion</span>: apps/v1<br>
+        <span class="kw">kind</span>: Deployment<br>
+        <span class="kw">metadata</span>:<br>
+        &nbsp;&nbsp;<span class="kw">name</span>: posts-depl<br>
+        <span class="kw">spec</span>:<br>
+        &nbsp;&nbsp;<span class="kw">replicas</span>: 1<br>
+        &nbsp;&nbsp;<span class="kw">selector</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">matchLabels</span>: { app: posts }<br>
+        &nbsp;&nbsp;<span class="kw">template</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">metadata</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">labels</span>: { app: posts }<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">spec</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">containers</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- name: posts<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;image: posts<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;imagePullPolicy: IfNotPresent<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ports:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- containerPort: 4000
       </div>
     </div>
-    <table>
-      <thead><tr><th>Service Kubernetes</th><th style="text-align:right">Port</th><th>Cible</th></tr></thead>
-      <tbody>
-        <tr><td>client-srv</td><td style="text-align:right">3000</td><td>client</td></tr>
-        <tr><td>posts-clusterip-srv</td><td style="text-align:right">4000</td><td>posts</td></tr>
-        <tr><td>comments-srv</td><td style="text-align:right">4001</td><td>comments</td></tr>
-        <tr><td>query-srv</td><td style="text-align:right">4002</td><td>query</td></tr>
-        <tr><td>moderation-srv</td><td style="text-align:right">4003</td><td>moderation</td></tr>
-        <tr><td>event-bus-srv</td><td style="text-align:right">4005</td><td>event-bus</td></tr>
-      </tbody>
-    </table>
+    <div class="keymsg">
+      <span class="ico-m"><i data-lucide="quote"></i></span>
+      <p>Le Deployment indique à Kubernetes quel conteneur lancer, combien d'instances maintenir et comment identifier les Pods associés.</p>
+    </div>
   </div></div>
 
 
-<!-- ══ 9 — INGRESS NGINX ══ -->
+<!-- ══ 9 — SERVICES KUBERNETES ══ -->
+<div class="slide bg-j3" data-ch="Kubernetes · Services">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-red">Déploiement Kubernetes</div>
+      <h2>Services : <span class="hr">adresse stable</span> pour les Pods</h2>
+      <p class="sub">Les Pods peuvent changer d'adresse IP. Le Service permet donc aux autres microservices de les joindre avec un nom stable.</p>
+    </div>
+    <div class="g2">
+      <div class="code" style="font-size:11px">
+        <span class="kw">apiVersion</span>: v1<br>
+        <span class="kw">kind</span>: Service<br>
+        <span class="kw">metadata</span>:<br>
+        &nbsp;&nbsp;<span class="kw">name</span>: posts-clusterip-srv<br>
+        <span class="kw">spec</span>:<br>
+        &nbsp;&nbsp;<span class="kw">type</span>: ClusterIP<br>
+        &nbsp;&nbsp;<span class="kw">selector</span>: { app: posts }<br>
+        &nbsp;&nbsp;<span class="kw">ports</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;- name: posts<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;protocol: TCP<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;port: 4000<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;targetPort: 4000
+      </div>
+      <table>
+        <thead><tr><th>Service Kubernetes</th><th style="text-align:right">Port</th><th>Cible</th></tr></thead>
+        <tbody>
+          <tr><td>client-srv</td><td style="text-align:right">3000</td><td>client</td></tr>
+          <tr><td>posts-clusterip-srv</td><td style="text-align:right">4000</td><td>posts</td></tr>
+          <tr><td>comments-srv</td><td style="text-align:right">4001</td><td>comments</td></tr>
+          <tr><td>query-srv</td><td style="text-align:right">4002</td><td>query</td></tr>
+          <tr><td>moderation-srv</td><td style="text-align:right">4003</td><td>moderation</td></tr>
+          <tr><td>event-bus-srv</td><td style="text-align:right">4005</td><td>event-bus</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="keymsg">
+      <span class="ico-m"><i data-lucide="quote"></i></span>
+      <p>Tous les Services sont de type ClusterIP, car ils servent principalement à la communication interne dans le cluster. L'accès externe est géré par l'Ingress.</p>
+    </div>
+  </div></div>
+
+
+<!-- ══ 10 — EVENT BUS ══ -->
+<div class="slide bg-j3" data-ch="Kubernetes · Event Bus">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-red">Communication interservices</div>
+      <h2>Event Bus & <span class="hr">flux d'événements</span></h2>
+      <p class="sub">L'Event Bus permet aux services de communiquer sans être fortement couplés. Chaque service réagit aux événements qui le concernent.</p>
+    </div>
+    <div class="flow">
+      <div class="flow-box"><div class="fb-title">posts</div></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box"><div class="fb-title">event-bus</div></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box"><div class="fb-title">query</div></div>
+    </div>
+    <div class="flow">
+      <div class="flow-box"><div class="fb-title">comments</div></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box"><div class="fb-title">event-bus</div></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box"><div class="fb-title">moderation</div></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box"><div class="fb-title">comments / query</div></div>
+    </div>
+    <div class="card card-red">
+      <h3 style="font-size:13px;color:var(--red-l);margin-bottom:8px">Exemple — création d'un commentaire</h3>
+      <ul>
+        <li>1. <span class="ref">comments</span> crée le commentaire</li>
+        <li>2. <span class="ref">comments</span> émet <span class="ref">CommentCreated</span></li>
+        <li>3. <span class="ref">event-bus</span> transmet à <span class="ref">moderation</span></li>
+        <li>4. <span class="ref">moderation</span> valide ou rejette</li>
+        <li>5. <span class="ref">moderation</span> émet <span class="ref">CommentModerated</span></li>
+        <li>6. <span class="ref">comments</span> met à jour le commentaire</li>
+        <li>7. <span class="ref">query</span> met à jour l'affichage</li>
+      </ul>
+    </div>
+    <div class="keymsg">
+      <span class="ico-m"><i data-lucide="quote"></i></span>
+      <p>L'Event Bus permet aux services de communiquer sans être fortement couplés. Chaque service réagit aux événements qui le concernent.</p>
+    </div>
+  </div></div>
+
+
+<!-- ══ 11 — INGRESS : POINT D'ENTRÉE HTTP ══ -->
 <div class="slide bg-j3" data-ch="Kubernetes · Ingress">
   <div class="wide col gap-l">
     <div class="col gap-s">
       <div class="tag tag-red">Exposition</div>
-      <h2>Ingress NGINX & <span class="hr">accès à l'application</span></h2>
-      <p class="sub">L'Ingress est le point d'entrée HTTP unique de l'application et redirige les requêtes selon l'URL.</p>
+      <h2>Ingress Kubernetes : <span class="hr">point d'entrée HTTP</span></h2>
+      <p class="sub">L'Ingress expose l'application vers l'extérieur et route les requêtes HTTP vers les bons services.</p>
+    </div>
+    <table>
+      <thead><tr><th>Route</th><th>Service cible</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ref">/</span></td><td>client-srv</td></tr>
+        <tr><td><span class="ref">/posts</span></td><td>query-srv</td></tr>
+        <tr><td><span class="ref">/posts/create</span></td><td>posts-clusterip-srv</td></tr>
+        <tr><td><span class="ref">/posts/.*/comments</span></td><td>comments-srv</td></tr>
+      </tbody>
+    </table>
+    <div class="flow">
+      <div class="flow-box"><div class="fb-title">Navigateur</div></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box"><div class="fb-title">Ingress</div><div class="fb-sub">routage par URL</div></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box"><div class="fb-title">Service ciblé</div></div>
+    </div>
+    <div class="keymsg">
+      <span class="ico-m"><i data-lucide="quote"></i></span>
+      <p>L'Ingress joue le rôle de point d'entrée HTTP. Il reçoit les requêtes du navigateur puis les redirige vers le bon service selon l'URL.</p>
+    </div>
+  </div></div>
+
+
+<!-- ══ 12 — CONFIGURATION DE L'INGRESS ══ -->
+<div class="slide bg-j3" data-ch="Kubernetes · Config. Ingress">
+  <div class="wide col gap-l">
+    <div class="col gap-s">
+      <div class="tag tag-red">Exposition</div>
+      <h2>Configuration de <span class="hr">l'Ingress</span></h2>
+      <p class="sub">Le contrôleur Ingress NGINX reçoit le trafic HTTP local, puis applique les règles définies pour router les requêtes.</p>
     </div>
     <div class="g2">
+      <div class="code" style="font-size:10.5px">
+        <span class="kw">apiVersion</span>: networking.k8s.io/v1<br>
+        <span class="kw">kind</span>: Ingress<br>
+        <span class="kw">metadata</span>:<br>
+        &nbsp;&nbsp;<span class="kw">name</span>: ingress-srv<br>
+        &nbsp;&nbsp;<span class="kw">annotations</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;nginx.ingress.kubernetes.io/use-regex: <span class="str">"true"</span><br>
+        <span class="kw">spec</span>:<br>
+        &nbsp;&nbsp;<span class="kw">ingressClassName</span>: nginx<br>
+        &nbsp;&nbsp;<span class="kw">rules</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;- http:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;paths:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- path: /posts/create<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pathType: Prefix<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;backend:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;service:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;name: posts-clusterip-srv<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;port: { number: 4000 }
+      </div>
       <div class="col gap-m">
+        <div class="card card-red">
+          <p><span class="ref">ingressClassName: nginx</span> permet d'associer explicitement la ressource Ingress au contrôleur NGINX.</p>
+        </div>
         <div class="code" style="font-size:11px">
           <span class="cmt"># Accès local via port-forward</span><br>
           kubectl port-forward -n ingress-nginx \<br>
@@ -442,28 +585,16 @@ tr.pick td{color:var(--blue-2xl)}
           <span class="cmt"># Application accessible sur</span><br>
           http://localhost:8080
         </div>
-        <div class="card card-red">
-          <p>Aucune modification du fichier <span class="ref">hosts</span> n'est nécessaire. Association de l'Ingress au contrôleur via : <span class="ref">ingressClassName: nginx</span></p>
-        </div>
       </div>
-      <table>
-        <thead><tr><th>Route</th><th>Service cible</th></tr></thead>
-        <tbody>
-          <tr><td><span class="ref">/</span></td><td>client-srv</td></tr>
-          <tr><td><span class="ref">/posts</span></td><td>query-srv</td></tr>
-          <tr><td><span class="ref">/posts/create</span></td><td>posts-clusterip-srv</td></tr>
-          <tr><td><span class="ref">/posts/.*/comments</span></td><td>comments-srv</td></tr>
-        </tbody>
-      </table>
     </div>
     <div class="keymsg">
       <span class="ico-m"><i data-lucide="quote"></i></span>
-      <p>L'Ingress est le point d'entrée HTTP unique de l'application et redirige les requêtes vers les bons services selon l'URL.</p>
+      <p>Le contrôleur Ingress NGINX reçoit le trafic HTTP local, puis applique les règles définies dans l'Ingress pour router les requêtes vers les bons Services Kubernetes.</p>
     </div>
   </div></div>
 
 
-<!-- ══ 10 — TESTS, PROBLÈMES, RÉSULTAT FINAL ══ -->
+<!-- ══ 13 — TESTS, PROBLÈMES, RÉSULTAT FINAL ══ -->
 <div class="slide bg-end" data-ch="Conclusion">
   <div class="wide col gap-l">
     <div class="col gap-s">
@@ -513,7 +644,7 @@ tr.pick td{color:var(--blue-2xl)}
 <div class="nav" id="nav">
   <button id="btnP" onclick="go(cur-1)">‹</button>
   <div id="dots" style="display:flex;gap:5px;align-items:center"></div>
-  <span class="ctr" id="ctr">1 / 10</span>
+  <span class="ctr" id="ctr">1 / 13</span>
   <button id="btnN" onclick="go(cur+1)">›</button>
 </div>
 
