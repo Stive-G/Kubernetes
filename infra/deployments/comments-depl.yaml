@@ -15,6 +15,6 @@ spec:
       containers:
         - name: comments
           image: comments
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4001

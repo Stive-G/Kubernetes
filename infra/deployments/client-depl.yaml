@@ -16,6 +16,9 @@ spec:
         - name: client
           # image: client
           image: client:v2
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: BROWSER
+              value: "none"
           ports:
             - containerPort: 3000
